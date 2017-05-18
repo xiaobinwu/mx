@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <title>mxgraph示例</title>
+    <link rel="stylesheet" href="css/common.css">
+</head>
+<body>
+    <h2 class="main title">方块连线</h2>
+    <h3 class="main sub-title"><a href="index.html">&lt;返回</a></h3>
+    <div class="main" id="wrap"></div>
+    <script type="text/javascript">mxBasePath = '../src';</script>
+    <script type="text/javascript" src="../src/js/mxClient.js"></script>
+    <script>
+        var 
+            wrap=document.getElementById('wrap'),
+            graph=new mxGraph(wrap),
+            parent=graph.getDefaultParent(),
+
+            vertex1=graph.insertVertex(parent,'null','第一个方块',50,50,200,200),
+            vertex2=graph.insertVertex(parent,'null','第二个方块',650,150,200,200);
+
+        graph.insertEdge(parent,null,'连接方块一和方块二',vertex1,vertex2,'')
+
+        
+    </script>
+</body>
+</html>

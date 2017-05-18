@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <title>mxgraph示例</title>
+    <link rel="stylesheet" href="css/common.css">
+    <style>
+        .com-box{position:relative; width:1200px; height: 600px; margin:0 auto;}
+        .com-box .sidebar{position:absolute; padding: 10px 10px 0 10px; width:100px; height:600px; background-color: #fff; box-shadow: 0 1px 1px rgba(0,0,0,.2); border-radius: 2px;}
+        .sidebar .shape-item{display: block; margin:0 auto 10px; width:100px; height:100px; cursor:move; text-align: center;}
+        .sidebar .shape-item img{width:90%; transition:transform ease-in-out .2s;}
+        .sidebar .shape-item span{ color: #666; }
+        .sidebar .shape-item img:hover{transform:scale(1.15);}
+        .com-box .main{position:absolute; left:140px; margin: 0; width:1060px;}
+
+        .btn-wrap{padding-left:160px; width:1080px;}
+    </style>
+</head>
+<body>
+    <h2 class="main title">综合示例</h2>
+    <h3 class="main sub-title"><a href="index.html">&lt;返回</a></h3>
+    <div class="com-box">
+        <div class="sidebar">
+            <a href="javascript:;" class="shape-item">
+                <span>查询</span>
+                <img src="images/binoculars.png" alt="查询">
+            </a>
+            <a href="javascript:;" class="shape-item">
+                <span>排重</span>
+                <img src="images/direction_sign.png" alt="排重">
+            </a>
+            <a href="javascript:;" class="shape-item">
+                <span>抽样</span>
+                <img src="images/lamp.png" alt="抽样">
+            </a>
+            <a href="javascript:;" class="shape-item">
+                <span>目标组</span>
+                <img src="images/tedy_bear.png" alt="目标组">
+            </a>
+            <a href="javascript:;" class="shape-item">
+                <span>短信</span>
+                <img src="images/binoculars.png" alt="短信">
+            </a>
+        </div>
+        <div class="main" id="wrap"></div>
+    </div>
+
+    <div class="btn-wrap">
+        <button id="js-autoLayout">自动优化布局</button>
+        <button id="js-btnGetXml">导出xml</button>
+        <button id="js-btnSetXml">加载xml</button>
+        <a href="ll.xml"></a>
+    </div>
+    <div style="display: none;">
+        <input type="file" name="" id="file" onchange="processFiles(this.files)">
+    </div>
+    <script>
+        function processFiles(files) {
+      var file = files[0];
+ 
+       
+      var reader = new FileReader();
+      reader.onload = function (e) {
+        // 这个事件发生，意为着数据准备好了
+        // 把它复制到页面的<div>元素中
+        var output = document.getElementById("js-txt");  
+        output.textContent = e.target.result;
+      };
+      reader.readAsText(file);
+    }
+    </script>
+    <div>
+        <textarea id="js-txt" cols="60" rows="10"></textarea>
+    </div>
+    <script type="text/javascript">mxBasePath = '../src';</script>
+    <script type="text/javascript" src="../src/js/mxClient.js"></script>
+    <script>
+        var 
+            wrap=document.getElementById('wrap'),
+            graph=new mxGraph(wrap),
+            parent=graph.getDefaultParent();
+
+        // 允许连接
+        graph.setConnectable(true);
+
+        // 允许拖拽所有图层
+        // graph.setPanning(true);
+        // graph.panningHandler.useLeftButtonForPanning = true;
+
+        // 双击元素事件
+        // graph.dblClick=function(evt,cell){
+        //     var model=graph.getModel();
+        //     if(cell.isVertex()){
+        //         alert('双击的是顶点(元素)');
+        //     }
+        //     if(cell.isEdge()){
+        //         alert('双击的是连接线');
+        //     }
+        //     return false;
+        // }
+
+        // 删除选中的元素
+        function removeTheSel(){
+            var cells = graph.getSelectionCells();
+            console.log(cells[0]);
+            console.log(cells[0].getView())
+            graph.removeCells(cells);
+        }
+
+        // delete按键
+        document.onkeyup=function(e){
+            if(e.keyCode==46){
+                removeTheSel();
+            }
+        }
+
+        // 设置连接线默认样式
+        var style=graph.getStylesheet().getDefaultEdgeStyle();
+        style[mxConstants.STYLE_EDGE] = mxEdgeStyle.ElbowConnector;
+        style[mxConstants.STYLE_ROUNDED] = true;
+        style[mxConstants.STYLE_ARCSIZE] = 10;
+        
+        // graph.selectCellForEvent(mxEvent.CLICK,function(sender,event){
+        //     console.log('sender',sender)
+        //     console.log('event',event.getProperty('cell'))
+        // });
+        // graph.getModel().addListener(mxEvent.END_EDIT,function(e,b,c){
+        //     console.log('luo',e);
+        // })
+
+        graph.getModel().addListener(mxEvent.CHANGE, function(sender, event){
+                graph.getModel().beginUpdate();
+                event.consume();
+                try {
+                        var changes = event.getProperty('edit').changes;
+                        console.info(changes);return;
+                        console.log({
+                            id:parseInt(changes.cell.id),
+                            x:changes.geometry.x,
+                            y:changes.geometry.y,
+                            w:changes.geometry.width,
+                            h:changes.geometry.height
+                        })
+                        // for (var i = 0; i < changes.length; i++) {
+                        //     var change = changes[i];
+                        //     var state = graph.view.getState(change.cell);
+                        //     console.log('chongfei+'+i,state)
+                        //     // if(state!=null){//color #1C86EE means new insert
+                        //     //     if(state.style[mxConstants.STYLE_IMAGE_BACKGROUND]!="#1C86EE" 
+                        //     //     && state.style[mxConstants.STYLE_STROKECOLOR]!="#1C86EE" 
+                        //     //     && state.style[mxConstants.STYLE_FONTCOLOR]!="#1C86EE"){
+                        //     //         graph.setCellStyles(mxConstants.STYLE_IMAGE_BACKGROUND, '#68228B', [change.cell]);
+                        //     //         graph.setCellStyles(mxConstants.STYLE_STROKECOLOR, '#68228B', [change.cell]);
+                        //     //     }
+                        //     // }
+                        // }
+                } finally {
+                    graph.getModel().endUpdate();
+                    graph.refresh();
+                }
+        });
+
+        // 尝试开始更新绘制
+        graph.getModel().beginUpdate();
+        try{
+
+            var sideImgs=document.querySelectorAll('.sidebar img');
+            for(var i=0;i<sideImgs.length;i++){
+
+                var funct;
+                (function(i){
+                    funct=function(graph, evt, target, x, y){
+
+                        // var style={};
+                        // style[mxConstants.STYLE_SHAPE] = mxConstants.SHAPE_LABEL;
+                        // style[mxConstants.STYLE_IMAGE]=sideImgs[i].getAttribute('src');
+                        // style[mxConstants.STYLE_IMAGE_WIDTH]=90;
+                        // style[mxConstants.STYLE_IMAGE_HEIGHT]=90;
+                        // style[mxConstants.STYLE_IMAGE_ALIGN]=mxConstants.ALIGN_CENTER;
+                        // // style[mxConstants.STYLE_FILLCOLOR]='transparent';
+                        // // style[mxConstants.STYLE_STROKECOLOR]='transparent';
+                        // graph.getStylesheet().putCellStyle('style1',style);
+
+                        var style={};
+                        style[mxConstants.STYLE_SHAPE] = mxConstants.SHAPE_LABEL;
+                        style[mxConstants.STYLE_IMAGE]=sideImgs[i].getAttribute('src');
+                        style[mxConstants.STYLE_IMAGE_WIDTH]=90;
+                        style[mxConstants.STYLE_IMAGE_HEIGHT]=90;
+                        style[mxConstants.STYLE_IMAGE_ALIGN]=mxConstants.ALIGN_CENTER;
+                        style[mxConstants.STYLE_FILLCOLOR]='transparent';
+                        style[mxConstants.STYLE_STROKECOLOR]='transparent';
+                        graph.getStylesheet().putCellStyle('style2',style);
+
+                        function addStyle(styleName){
+                            var styleObj=graph.getStylesheet().styles;
+                            if(styleName in styleObj){
+                                var arr=[];
+                                for(var i in styleObj[styleName]){
+                                    arr.push(i+'='+styleObj[styleName][i]);
+                                }
+                                return new mxCell('',new mxGeometry(0, 0, 90, 90),arr.join(';'));
+                            }
+                            
+                        }
+
+                        var cell=addStyle('style2')
+                        // var cell = new mxCell('', new mxGeometry(0, 0, 90, 90),'style2');
+                        cell.vertex = true;
+                        var cells = graph.importCells([cell], x, y, target);
+
+                        if (cells != null && cells.length > 0)
+                        {
+                         graph.scrollCellToVisible(cells[0]);
+                         graph.setSelectionCells(cells);
+                        }
+                    }
+                })(i)
+                
+
+                var dragElt=sideImgs[i].cloneNode(true);
+                dragElt.style.width='90px';
+
+                var ds = mxUtils.makeDraggable(sideImgs[i], graph, funct,dragElt );
+            }
+        
+
+            document.querySelector('#js-autoLayout').onclick=function(){
+                new mxFastOrganicLayout(graph).execute(parent);
+            };
+
+        }finally{
+            // 无论怎样都结束绘制
+            graph.getModel().endUpdate();
+        }
+
+        // var xml = '<root><mxCell id="2" value="World!Vishal" vertex="1"><mxGeometry x="200" y="150" width="80" height="30" as="geometry"/></mxCell><mxCell id="3" edge="1" source="2"><mxGeometry relative="1" as="geometry"><mxPoint x="440" y="90" as="targetPoint"/></mxGeometry></mxCell></root>',
+        //     doc = mxUtils.parseXml(xml),
+        //     elt = doc.documentElement.firstChild,
+        //     codec = new mxCodec(doc),
+        //     cells = [];
+
+        // while (elt != null){                
+        //   cells.push(codec.decodeCell(elt));
+        //     graph.refresh();
+        //   elt = elt.nextSibling;
+        // }
+
+        document.querySelector('#js-btnGetXml').onclick=function(){
+            var encoder = new mxCodec();
+            var node = encoder.encode(graph.getModel());
+            mxUtils.popup(mxUtils.getXml(node), true);
+        }
+
+
+        // mxUtils.popup(mxUtils.createXmlDocument('www'), true);
+
+        document.querySelector('#js-btnSetXml').onclick=function(){
+            var xml = document.querySelector('#js-txt').value,
+            doc = mxUtils.parseXml(xml),
+            elt = doc.documentElement.firstChild.firstChild,
+            codec = new mxCodec(doc),
+            cells = [];
+
+            while (elt != null){                
+              cells.push(codec.decodeCell(elt));
+                graph.refresh();
+              elt = elt.nextSibling;
+            }
+            graph.addCells(cells);
+        }                                                                                        
+        
+        
+    </script>
+</body>
+</html>

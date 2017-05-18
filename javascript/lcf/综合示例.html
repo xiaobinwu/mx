@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <title>mxgraph示例</title>
+    <link rel="stylesheet" href="css/common.css">
+    <style>
+        .com-box{position:relative; width:1200px; height: 600px; margin:0 auto;}
+        .com-box .sidebar{position:absolute; padding: 10px 10px 0 10px; width:100px; height:600px; background-color: #fff; box-shadow: 0 1px 1px rgba(0,0,0,.2); border-radius: 2px;}
+        .sidebar .shape-item{display: block; margin:0 auto 10px; width:100px; height:100px; cursor:move; text-align: center;}
+        .sidebar .shape-item img{width:90%; transition:transform ease-in-out .2s;}
+        .sidebar .shape-item span{ color: #666; }
+        .sidebar .shape-item img:hover{transform:scale(1.15);}
+        .com-box .main{position:absolute; left:140px; margin: 0; width:1060px; overflow: auto;}
+
+        .btn-wrap{padding-left:160px; width:1080px;}
+    </style>
+</head>
+<body>
+    <h2 class="main title">综合示例</h2>
+    <h3 class="main sub-title"><a href="index.html">&lt;返回</a></h3>
+    <div class="com-box">
+        <div class="sidebar">
+            <a href="javascript:;" class="shape-item">
+                <span>查询</span>
+                <img src="images/binoculars.png" alt="查询">
+            </a>
+            <a href="javascript:;" class="shape-item">
+                <span>排重</span>
+                <img src="images/direction_sign.png" alt="排重">
+            </a>
+            <a href="javascript:;" class="shape-item">
+                <span>抽样</span>
+                <img src="images/lamp.png" alt="抽样">
+            </a>
+            <a href="javascript:;" class="shape-item">
+                <span>目标组</span>
+                <img src="images/tedy_bear.png" alt="目标组">
+            </a>
+            <a href="javascript:;" class="shape-item">
+                <span>短信</span>
+                <img src="images/binoculars.png" alt="短信">
+            </a>
+        </div>
+        <div class="main" id="wrap"></div>
+    </div>
+
+    <div class="btn-wrap">
+        <button id="js-autoLayout">自动优化布局</button>
+        <button id="js-btnGetXml">导出xml</button>
+        <button id="js-btnSetXml">加载xml</button>
+        <button id="js-btnEnlarge">放大</button>
+        <button id="js-btnShrinkDown">缩小</button>
+        <button id="js-btnExportImage">导出图片</button>
+    </div>
+    <div style="display: none;">
+        <input type="file" name="" id="file" onchange="processFiles(this.files)">
+    </div>
+    <script>
+        function processFiles(files) {
+      var file = files[0];
+ 
+       
+      var reader = new FileReader();
+      reader.onload = function (e) {
+        // 这个事件发生，意为着数据准备好了
+        // 把它复制到页面的<div>元素中
+        var output = document.getElementById("js-txt");  
+        output.textContent = e.target.result;
+      };
+      reader.readAsText(file);
+    }
+    </script>
+    <div>
+        <textarea id="js-txt" cols="60" rows="10"></textarea>
+    </div>
+    <script type="text/javascript">mxBasePath = '../src';</script>
+    <script type="text/javascript" src="../src/js/mxClient.js"></script>
+    <script>
+
+    //MyGraph类
+    /*
+        参数：
+        container: 绘图容器，必须
+        cellImages: 拖拽的图片集
+     */
+    function MyGraph(options){
+        //继承超类-构造函数
+        this.container = options.container;
+        this.cellImages = options.cellImages;
+        mxGraph.call(this, this.container);
+        this.parent = this.getDefaultParent();
+        this.initData();
+        this.initDraw();
+        this.initEvent();
+    }
+    MyGraph.prototype = new mxGraph();
+    MyGraph.prototype.constructor = MyGraph;
+    MyGraph.prototype.initData = function(){
+        this.setConnectable(true);// 允许连接
+        this.setPanning(true);
+        //设置连线默认样式
+        var lineStyle = this.getStylesheet().getDefaultEdgeStyle();
+        lineStyle[mxConstants.STYLE_EDGE] = mxEdgeStyle.ElbowConnector;
+        lineStyle[mxConstants.STYLE_ROUNDED] = true;
+        lineStyle[mxConstants.STYLE_ARCSIZE] = 10;
+    }
+    //初始化事件
+    MyGraph.prototype.initEvent = function(){
+        var _self = this;
+
+        //监听cell变化
+        this.getModel().addListener(mxEvent.CHANGE, function(sender, event){
+                _self.getModel().beginUpdate();
+                event.consume();
+                try {
+                        var changes = event.getProperty('edit').changes;
+                        console.info(changes);return;
+                        console.log({
+                            id:parseInt(changes.cell.id),
+                            x:changes.geometry.x,
+                            y:changes.geometry.y,
+                            w:changes.geometry.width,
+                            h:changes.geometry.height
+                        })
+                } finally {
+                    _self.getModel().endUpdate();
+                    _self.refresh();
+                }
+        });
+
+    }
+    //自动优化布局
+    MyGraph.prototype.autoLayout = function(){
+        new mxFastOrganicLayout(this).execute(this.parent);
+    }
+    //获取Graph xml 用于保存至保存数据库
+    MyGraph.prototype.exportGraphToXml = function(){
+        var encoder = new mxCodec();
+        var node = encoder.encode(this.getModel());
+        return mxUtils.getXml(node);
+    }
+    //通过xml还原Graph
+    MyGraph.prototype.importGraphWithXml = function(xml){
+        var doc = mxUtils.parseXml(xml),
+            elt = doc.documentElement.firstChild.firstChild,
+            codec = new mxCodec(doc),
+            cells = [];
+
+        while (elt != null){
+          cells.push(codec.decodeCell(elt));
+          this.refresh();
+          elt = elt.nextSibling;
+        }
+        this.addCells(cells);
+    }
+    //删除选中cell
+    MyGraph.prototype.removeSelectedCell = function(){
+        var cells = this.getSelectionCells();
+        // console.log(cells[0]);
+        // console.log(cells[0].getView())
+        this.removeCells(cells);
+    }
+    //导出图片
+    MyGraph.prototype.exportGraphToImage = function(){
+        var xmlDoc = mxUtils.createXmlDocument();
+        var root = xmlDoc.createElement('output');
+        xmlDoc.appendChild(root);
+        var xmlCanvas = new mxXmlCanvas2D(root);
+        var imgExport = new mxImageExport();
+        imgExport.drawState(this.getView().getState(this.model.root), xmlCanvas);
+
+        var bounds = this.getGraphBounds();
+        var w = Math.ceil(bounds.x + bounds.width);
+        var h = Math.ceil(bounds.y + bounds.height);
+        var xml = mxUtils.getXml(root);
+        console.log(xml)
+        new mxXmlRequest('export', 'format=png&w=' + w +
+             '&h=' + h + '&bg=#F9F7ED&xml=' + encodeURIComponent(xml))
+             .simulate(document, '_blank');
+    }
+    //开始绘制
+    MyGraph.prototype.initDraw = function(){
+        var _self = this;
+        // 尝试开始更新绘制
+        _self.getModel().beginUpdate();
+        try{
+            var sideImgs = _self.cellImages;
+            for(var i=0;i < sideImgs.length;i++){
+                var funct;
+                (function(i){
+                    funct=function(graph, evt, target, x, y){
+                        var style={};
+                        style[mxConstants.STYLE_SHAPE] = mxConstants.SHAPE_LABEL;
+                        style[mxConstants.STYLE_IMAGE]=sideImgs[i].getAttribute('src');
+                        style[mxConstants.STYLE_IMAGE_WIDTH]=90;
+                        style[mxConstants.STYLE_IMAGE_HEIGHT]=90;
+                        style[mxConstants.STYLE_IMAGE_ALIGN]=mxConstants.ALIGN_CENTER;
+                        style[mxConstants.STYLE_FILLCOLOR]='transparent';
+                        style[mxConstants.STYLE_STROKECOLOR]='transparent';
+                        graph.getStylesheet().putCellStyle('style2',style);
+
+                        function addStyle(styleName){
+                            var styleObj=graph.getStylesheet().styles;
+                            if(styleName in styleObj){
+                                var arr=[];
+                                for(var i in styleObj[styleName]){
+                                    arr.push(i+'='+styleObj[styleName][i]);
+                                }
+                                return new mxCell('',new mxGeometry(0, 0, 90, 90),arr.join(';'));
+                            }
+                        }
+
+                        var cell=addStyle('style2')
+                        // var cell = new mxCell('', new mxGeometry(0, 0, 90, 90),'style2');
+                        cell.vertex = true;
+                        var cells = graph.importCells([cell], x, y, target);
+
+                        if (cells != null && cells.length > 0)
+                        {
+                         graph.scrollCellToVisible(cells[0]);
+                         graph.setSelectionCells(cells);
+                        }
+                    }
+                })(i)
+
+                var dragElt = sideImgs[i].cloneNode(true);
+                dragElt.style.width = '90px';
+                var ds = mxUtils.makeDraggable(sideImgs[i], _self, funct, dragElt);
+            }
+
+        }finally{
+            // 无论怎样都结束绘制
+            _self.getModel().endUpdate();
+        }
+    }
+
+
+
+
+        var wrap=document.getElementById('wrap');
+        var cellImgs = document.querySelectorAll('.sidebar img');
+        var myGraph = new MyGraph({
+            container: wrap,
+            cellImages: cellImgs
+        });
+
+        //通过xml还原Graph
+        document.querySelector('#js-btnSetXml').onclick=function(){
+            var xml = document.querySelector('#js-txt').value;
+            myGraph.importGraphWithXml(xml);
+        }
+
+        //获取xml
+        document.querySelector('#js-btnGetXml').onclick=function(){
+            mxUtils.popup(myGraph.exportGraphToXml(), true);
+        }
+
+        //自动优化布局
+        document.querySelector('#js-autoLayout').onclick = function(){
+            myGraph.autoLayout();
+        };
+
+        //删除选中的cell
+        document.onkeyup = function(e){
+            if(e.keyCode == 46){
+                myGraph.removeSelectedCell();
+            }
+        }
+
+        //放大 js-btnEnlarge
+        document.querySelector('#js-btnEnlarge').onclick = function(){
+            myGraph.zoomIn();
+        };
+
+        //缩小 js-js-btnShrinkDown
+        document.querySelector('#js-btnShrinkDown').onclick = function(){
+            myGraph.zoomOut();
+        };
+
+
+        //导出图片
+        document.querySelector('#js-btnExportImage').onclick = function(){
+            myGraph.exportGraphToImage();
+        };
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <title>mxgraph示例</title>
+    <link rel="stylesheet" href="css/common.css">
+</head>
+<body>
+    <h2 class="main title">拖拽建立联系</h2>
+    <h3 class="main sub-title"><a href="index.html">&lt;返回</a></h3>
+    <div class="main" id="wrap"></div>
+    <script type="text/javascript">mxBasePath = '../src';</script>
+    <script type="text/javascript" src="../src/js/mxClient.js"></script>
+    <script>
+        var 
+            wrap=document.getElementById('wrap'),
+            graph=new mxGraph(wrap);
+            parent=graph.getDefaultParent();
+
+        graph.setConnectable(true);
+
+        var v1=graph.insertVertex(parent,null,'移到元素中心\n出现手型\n即可拖拽出箭头',40,40,120,120);
+        var v2=graph.insertVertex(parent,null,'指向到这里\n出现绿框时松开',350,350,120,120);
+        
+    </script>
+</body>
+</html>

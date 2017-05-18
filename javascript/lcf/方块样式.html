@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <title>mxgraph示例</title>
+    <link rel="stylesheet" href="css/common.css">
+</head>
+<body>
+    <h2 class="main title">方块样式</h2>
+    <h3 class="main sub-title"><a href="index.html">&lt;返回</a></h3>
+    <div class="main" id="wrap"></div>
+    <script type="text/javascript">mxBasePath = '../src';</script>
+    <script type="text/javascript" src="../src/js/mxClient.js"></script>
+    <script>
+        var 
+            wrap=document.getElementById('wrap'),
+            graph=new mxGraph(wrap),
+            parent=graph.getDefaultParent();
+
+
+        // =============一个圆角矩形============
+        var style={};
+        // 填充色
+        style[mxConstants.STYLE_FILLCOLOR]='#09a';
+
+        // 边框色
+        style[mxConstants.STYLE_STROKECOLOR]='#00BCD4';
+        // 边框宽度
+        style[mxConstants.STYLE_STROKEWIDTH]=15;
+
+        // 圆角
+        style[mxConstants.STYLE_ROUNDED]=true;
+
+        // 字颜色
+        style[mxConstants.STYLE_FONTCOLOR]='#fff';
+        // 字大小
+        style[mxConstants.STYLE_FONTSIZE]=20;
+
+        graph.getStylesheet().putCellStyle('style1',style);
+
+        var verTex1=graph.insertVertex(parent,null,'湖蓝色方块',50,50,150,150,'style1');
+
+
+
+        // ============包含图片的元素1============
+        var style={};
+
+        style[mxConstants.STYLE_SHAPE] = mxConstants.SHAPE_LABEL;
+        style[mxConstants.STYLE_FILLCOLOR]='transparent';
+        style[mxConstants.STYLE_STROKECOLOR]='#ccc';
+        style[mxConstants.STYLE_IMAGE]='http://static.globalegrow.com/dist/images/domeimg/ch/logo.jpg';
+        style[mxConstants.STYLE_IMAGE_WIDTH]=230;
+        style[mxConstants.STYLE_IMAGE_HEIGHT]=60;
+        style[mxConstants.STYLE_IMAGE_ALIGN]=mxConstants.ALIGN_CENTER;
+
+        graph.getStylesheet().putCellStyle('style2',style);
+
+        var verTex2=graph.insertVertex(parent,null,'',260,50,230,60,'style2');
+
+
+
+        // ============包含图片的元素2============
+        var style={};
+
+        style[mxConstants.STYLE_SHAPE] = mxConstants.SHAPE_LABEL;
+        style[mxConstants.STYLE_IMAGE]='http://static-w.wzhouhui.net/images/domeimg/logo.png';
+        style[mxConstants.STYLE_IMAGE_WIDTH]=230;
+        style[mxConstants.STYLE_IMAGE_HEIGHT]=60;
+        style[mxConstants.STYLE_FILLCOLOR]='transparent';
+        style[mxConstants.STYLE_STROKECOLOR]='#ccc';
+        style[mxConstants.STYLE_IMAGE_ALIGN]=mxConstants.ALIGN_CENTER;
+
+        graph.getStylesheet().putCellStyle('style3',style);
+
+        var verTex3=graph.insertVertex(parent,null,'',460,350,230,60,'style3');
+
+
+
+        
+
+        // var edge1=graph.insertEdge(parent,null,'旗下分公司',verTex2,verTex3); 连接：与本示例无关
+       
+        
+    </script>
+</body>
+</html>

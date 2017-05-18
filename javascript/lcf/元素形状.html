@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <title>mxgraph示例</title>
+    <link rel="stylesheet" href="css/common.css">
+</head>
+<body>
+    <h2 class="main title">元素形状</h2>
+    <h3 class="main sub-title"><a href="index.html">&lt;返回</a></h3>
+    <div class="main" id="wrap"></div>
+    <script type="text/javascript">mxBasePath = '../src';</script>
+    <script type="text/javascript" src="../src/js/mxClient.js"></script>
+    <script>
+        var 
+            wrap=document.getElementById('wrap'),
+            graph=new mxGraph(wrap),
+            parent=graph.getDefaultParent();
+
+        graph.insertVertex(parent,null,'矩形',20,40,120,120);
+        graph.insertVertex(parent,null,'圆角矩形',220,40,120,120,'rounded=1;arcSize=15');
+        graph.insertVertex(parent,null,'圆形',420,40,120,120,'shape=ellipse');
+        graph.insertVertex(parent,null,'三角形',620,40,120,120,'shape=triangle;direction=north');
+        graph.insertVertex(parent,null,'菱形',820,40,120,120,'shape=rhombus');
+        graph.insertVertex(parent,null,'圆柱形',20,240,120,120,'shape=cylinder');
+        graph.insertVertex(parent,null,'人物',220,240,120,120,'shape=actor');
+        graph.insertVertex(parent,null,'云朵',420,240,120,120,'shape=cloud');
+    </script>
+</body>
+</html>

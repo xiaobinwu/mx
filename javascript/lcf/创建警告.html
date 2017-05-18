@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <title>mxgraph示例</title>
+    <link rel="stylesheet" href="css/common.css">
+</head>
+<body>
+    <h2 class="main title">创建警告</h2>
+    <h3 class="main sub-title"><a href="index.html">&lt;返回</a></h3>
+    <div class="main" id="wrap"></div>
+    <script type="text/javascript">mxBasePath = '../src';</script>
+    <script type="text/javascript" src="../src/js/mxClient.js"></script>
+    <script>
+        var 
+            wrap=document.getElementById('wrap'),
+            graph=new mxGraph(wrap),
+            parent=graph.getDefaultParent();
+
+        // 开启提醒消息功能
+        graph.setTooltips(true);
+        graph.setConnectable(true);
+
+        // 一个方块
+        var v1=graph.insertVertex(parent,null,'有警告的方块',40,40,200,200,"fontSize=20;fontColor=yellow;fillColor=red");
+        // 获取到元素
+        var c1=graph.getModel().getCell(v1.id);
+
+
+        graph.addCellOverlay(c1,new mxCellOverlay(graph.warningImage,'警告警告'));
+    </script>
+</body>
+</html>

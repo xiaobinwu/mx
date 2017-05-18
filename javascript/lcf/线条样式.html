@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <title>mxgraph示例</title>
+    <link rel="stylesheet" href="css/common.css">
+</head>
+<body>
+    <h2 class="main title">线条样式</h2>
+    <h3 class="main sub-title"><a href="index.html">&lt;返回</a></h3>
+    <div class="main" id="wrap"></div>
+    <script type="text/javascript">mxBasePath = '../src';</script>
+    <script type="text/javascript" src="../src/js/mxClient.js"></script>
+    <script>
+        var 
+            wrap=document.getElementById('wrap'),
+            graph=new mxGraph(wrap),
+            parent=graph.getDefaultParent();
+
+        var
+            v0=graph.insertVertex(parent,null,'起点元素',450,200,120,120),
+            v1=graph.insertVertex(parent,null,'目标元素1',250,20,120,120),
+            v2=graph.insertVertex(parent,null,'目标元素2',850,200,120,120),
+            v3=graph.insertVertex(parent,null,'目标元素3',200,400,120,120);
+
+        graph.insertEdge(parent,null,'弯头线连接',v0,v1,'edgeStyle=elbowEdgeStyle');
+        graph.insertEdge(parent,null,'直线连接',v0,v2);
+        graph.insertEdge(parent,null,'弯头圆角线连接',v0,v3,'edgeStyle=elbowEdgeStyle;rounded=1;arcSize=50');
+        
+    </script>
+</body>
+</html>

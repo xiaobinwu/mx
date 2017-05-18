@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <title>mxgraph示例</title>
+    <link rel="stylesheet" href="css/common.css">
+</head>
+<body>
+    <h2 class="main title">删除选中</h2>
+    <h3 class="main sub-title"><a href="index.html">&lt;返回</a></h3>
+    <div class="main" id="wrap"></div>
+    <div style="width:1200px; margin:20px auto;">
+        <button id="js-btnDel" style="padding:10px 30px; background:#ff4081; color:#fff; border:none;">删除选中</button>
+    </div>
+    <script type="text/javascript">mxBasePath = '../src';</script>
+    <script type="text/javascript" src="../src/js/mxClient.js"></script>
+    <script>
+        var 
+            wrap=document.getElementById('wrap'),
+            graph=new mxGraph(wrap),
+            parent=graph.getDefaultParent();
+
+        graph.insertVertex(parent,null,'可以选中删除我',60,60,160,160);
+
+        // 删除选中的元素
+        var removeTheSel=function(graph){
+            if(confirm('删除选中的元素?')){
+                var cells = graph.getSelectionCells();
+                graph.removeCells(cells);
+            }
+        }
+
+        // delete按钮
+        document.onkeyup=function(e){
+            if(e.keyCode==46){
+                removeTheSel(graph);
+            }
+        }
+
+        // 点击删除
+        document.querySelector('#js-btnDel').onclick=function(){
+            removeTheSel(graph);
+        }
+        
+    </script>
+</body>
+</html>

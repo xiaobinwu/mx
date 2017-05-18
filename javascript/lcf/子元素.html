@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <title>mxgraph示例</title>
+    <link rel="stylesheet" href="css/common.css">
+</head>
+<body>
+    <h2 class="main title">子元素</h2>
+    <h3 class="main sub-title"><a href="index.html">&lt;返回</a></h3>
+    <div class="main" id="wrap"></div>
+    <script type="text/javascript">mxBasePath = '../src';</script>
+    <script type="text/javascript" src="../src/js/mxClient.js"></script>
+    <script>
+        var 
+            wrap=document.getElementById('wrap'),
+            graph=new mxGraph(wrap),
+            parent=graph.getDefaultParent();
+
+        graph.getModel().beginUpdate();
+
+        try{
+            var v1=graph.insertVertex(parent,null,'我是一号元素',200,200,120,120);
+
+            // 特别注意：第4、5个参数坐标值是父元素对应宽高的整数倍
+            var v1c1=graph.insertVertex(v1,null,'子元素',.5,0,50,20,'resizable=0');
+            v1c1.geometry.relative=true;
+            v1c1.geometry.offset=new mxPoint(-25,-20);
+            v1c1.setConnectable(false);
+        }finally{
+            graph.getModel().endUpdate();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Document</title>
+    <script>
+    mxBasePath = '../src';
+    </script>
+    <script src="../src/js/mxClient.js"></script>
+</head>
+
+<body>
+    <div id="box" style="background-color: #ddd; width:800px; height:500px;"></div>
+    <script>
+    var box = document.querySelector('#box');
+
+    var graph = new mxGraph(box);
+
+    var parent = graph.getDefaultParent();
+    console.log('luochongfei',parent)
+
+    // 允许连接
+    graph.setConnectable(true);
+
+    // graph.connectionHandler.createEdgeState = function(me) {
+    //     var edge = graph.createEdge(null, null, null, null, null);
+
+    //     return new mxCellState(this.graph.view, edge, this.graph.getCellStyle(edge));
+    // };
+
+
+    // graph.getStylesheet().getDefaultEdgeStyle()['edgeStyle'] = 'orthogonalEdgeStyle';
+    // new mxRubberband(graph);
+
+    // Gets the default parent for inserting new cells. This
+    // is normally the first child of the root (ie. layer 0).
+
+    // Adds cells to the model in a single step
+    graph.getModel().beginUpdate();
+
+    // 创建一个样式对象
+    var style = {};
+    // 形状：矩形
+    style[mxConstants.STYLE_SHAPE] = mxConstants.SHAPE_RECTANGLE;
+    // 文字颜色
+    style[mxConstants.STYLE_FONTCOLOR] ='#fff';
+    // 填充颜色
+    style[mxConstants.STYLE_FILLCOLOR] ='#09a';
+    // 边框颜色
+    style[mxConstants.STYLE_STROKECOLOR] ='transparent';
+    // 圆角
+    style[mxConstants.STYLE_ROUNDED] = true;
+
+    
+    // 将样式赋到roundBtn中
+    graph.getStylesheet().putCellStyle('roundBtn',style);
+
+
+    try {
+
+        // 绘制一个顶点元素（形状）
+        var v1 = graph.insertVertex(parent, '', '客户机', 20, 20, 100, 60,'roundBtn');
+
+        // 绘制一个顶点元素（形状）
+        var v2 = graph.insertVertex(parent, '', '服务器', 240, 120, 80, 120,'roundBtn');
+
+
+        var e1 = graph.insertEdge(parent, null, '', v1, v2);
+
+        // var v2 = graph.insertVertex(parent, null, 'World!', 200, 150, 80, 30);
+        // var e1 = graph.insertEdge(parent, null, '', v1, v2);
+    } finally {
+        // Updates the display
+        graph.getModel().endUpdate();
+    }
+    </script>
+</body>
+
+</html>
