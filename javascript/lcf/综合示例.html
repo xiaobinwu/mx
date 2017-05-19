@@ -11,7 +11,7 @@
         .sidebar .shape-item img{width:90%; transition:transform ease-in-out .2s;}
         .sidebar .shape-item span{ color: #666; }
         .sidebar .shape-item img:hover{transform:scale(1.15);}
-        .com-box .main{position:absolute; left:140px; margin: 0; width:1060px; overflow: auto;}
+        .com-box .main{position:absolute; left:140px; margin: 0; width:1060px; overflow: auto; background:url('images/grid.gif');}
 
         .btn-wrap{padding-left:160px; width:1080px;}
     </style>
@@ -23,23 +23,23 @@
         <div class="sidebar">
             <a href="javascript:;" class="shape-item">
                 <span>查询</span>
-                <img src="images/binoculars.png" alt="查询">
+                <img src="images/binoculars.png" alt="查询" data-flag="inquire">
             </a>
             <a href="javascript:;" class="shape-item">
                 <span>排重</span>
-                <img src="images/direction_sign.png" alt="排重">
+                <img src="images/direction_sign.png" alt="排重" data-flag="heavy_discharge">
             </a>
             <a href="javascript:;" class="shape-item">
                 <span>抽样</span>
-                <img src="images/lamp.png" alt="抽样">
+                <img src="images/lamp.png" alt="抽样" data-flag="sampling">
             </a>
             <a href="javascript:;" class="shape-item">
                 <span>目标组</span>
-                <img src="images/tedy_bear.png" alt="目标组">
+                <img src="images/tedy_bear.png" alt="目标组" data-flag="target_group">
             </a>
             <a href="javascript:;" class="shape-item">
                 <span>短信</span>
-                <img src="images/binoculars.png" alt="短信">
+                <img src="images/message.png" alt="短信" data-flag="SMS">
             </a>
         </div>
         <div class="main" id="wrap"></div>
@@ -90,20 +90,55 @@
         this.cellImages = options.cellImages;
         mxGraph.call(this, this.container);
         this.parent = this.getDefaultParent();
+        this.defineConstantForGraph();
         this.initData();
+        this.setGlobalStyle();
         this.initDraw();
         this.initEvent();
     }
     MyGraph.prototype = new mxGraph();
     MyGraph.prototype.constructor = MyGraph;
+    MyGraph.prototype.defineConstantForGraph = function(){
+        //栏目组
+        this.column = {
+            inquire: '查询',
+            heavy_discharge: '排重',
+            sampling: '抽样',
+            target_group: '目标组',
+            SMS: '短信'
+        }
+        this.layoutWay = {
+            mxFastOrganicLayout: mxFastOrganicLayout,
+            mxCircleLayout: mxCircleLayout,
+            mxCompactTreeLayout: mxCompactTreeLayout,
+            mxCompositeLayout: mxCompositeLayout, //暂不支持
+            mxEdgeLabelLayout: mxEdgeLabelLayout,
+            mxParallelEdgeLayout: mxParallelEdgeLayout,
+            mxPartitionLayout: mxPartitionLayout,
+            mxRadialTreeLayout: mxRadialTreeLayout,
+            mxStackLayout: mxStackLayout
+        }
+    }
     MyGraph.prototype.initData = function(){
+        var _self = this;
         this.setConnectable(true);// 允许连接
         this.setPanning(true);
-        //设置连线默认样式
-        var lineStyle = this.getStylesheet().getDefaultEdgeStyle();
-        lineStyle[mxConstants.STYLE_EDGE] = mxEdgeStyle.ElbowConnector;
-        lineStyle[mxConstants.STYLE_ROUNDED] = true;
-        lineStyle[mxConstants.STYLE_ARCSIZE] = 10;
+        this.orderCells(true);//使线在所有元素的底下,吸附元素
+        this.setTooltips(true); //允许显示tooltip
+        this.edgeLabelsMovable = false;
+        //安装右键菜单,且阻止默认右键行为
+        mxEvent.disableContextMenu(this.container);
+        this.popupMenuHandler.factoryMethod = function(menu, cell, evt){
+            return _self.createPopupMenu(_self, menu, cell, evt);
+        };
+        //自定义tooltip
+        this.getTooltipForCell = function(cell){
+            var cellValue = '';
+            cellValue += _self.column[cell.cellType] ? '所属栏目组：' + _self.column[cell.cellType] + ' ' : '';
+            cellValue += cell.value ? 'Label：' + cell.value : '';
+            return cellValue;
+        }
+
     }
     //初始化事件
     MyGraph.prototype.initEvent = function(){
@@ -129,10 +164,38 @@
                 }
         });
 
+        //连接时的监听？
+        this.connectionHandler.addListener(mxEvent.CONNECT, function(sender, evt){
+              var edge = evt.getProperty('cell');
+              var source = _self.getModel().getTerminal(edge, true);
+              var target = _self.getModel().getTerminal(edge, false);
+
+              var style = _self.getCellStyle(edge);
+              var sourcePortId = style[mxConstants.STYLE_SOURCE_PORT];
+              var targetPortId = style[mxConstants.STYLE_TARGET_PORT];
+
+              // mxLog.show();
+              // mxLog.debug('connect', edge, source.id, target.id, sourcePortId, targetPortId);
+        });
+
     }
-    //自动优化布局
+    //自定义布局-工厂模式
     MyGraph.prototype.autoLayout = function(){
-        new mxFastOrganicLayout(this).execute(this.parent);
+        var args = Array.prototype.slice.call(arguments),
+            way = args.shift();
+        args.unshift(this);
+        if(way in this.layoutWay){
+
+            var fConstructor = this, fNewConstr = function() { 
+                fConstructor.layoutWay[way].apply(this, args); 
+            };
+            fNewConstr.prototype = fConstructor.layoutWay[way].prototype;
+            return new fNewConstr().execute(this.parent);
+
+        }else{
+            console.log(new mxFastOrganicLayout(this))
+            new mxFastOrganicLayout(this).execute(this.parent); //默认自动优化布局
+        }
     }
     //获取Graph xml 用于保存至保存数据库
     MyGraph.prototype.exportGraphToXml = function(){
@@ -179,41 +242,68 @@
              '&h=' + h + '&bg=#F9F7ED&xml=' + encodeURIComponent(xml))
              .simulate(document, '_blank');
     }
+     MyGraph.prototype.myUtil = function(){
+        return {
+            getLocalTime: function(){
+                return new Date(parseInt(new Date().getTime())).toLocaleString().replace(/:\d{1,2}$/,' ');
+            }
+        }
+     }
+    //设置全局样式
+    MyGraph.prototype.setGlobalStyle = function(){
+
+        //设置连接前hover样式
+        mxConnectionHandler.prototype.connectImage = new mxImage('images/connector.gif', 16, 16);
+
+        //设置edge默认样式
+        var lineStyle = this.getStylesheet().getDefaultEdgeStyle();
+        lineStyle[mxConstants.STYLE_EDGE] = mxEdgeStyle.ElbowConnector;
+        lineStyle[mxConstants.STYLE_ROUNDED] = true;
+        lineStyle[mxConstants.STYLE_ARCSIZE] = 10;
+        lineStyle[mxConstants.STYLE_STROKEWIDTH] = 2;
+        lineStyle[mxConstants.STYLE_LABEL_PADDING] = 3;
+        lineStyle[mxConstants.STYLE_LABEL_BACKGROUNDCOLOR] = '#fff';
+
+        //cell样式
+        var style={};
+        //Shape
+        style[mxConstants.STYLE_SHAPE] = mxConstants.SHAPE_IMAGE;
+        //Image
+        style[mxConstants.STYLE_IMAGE_WIDTH]=90;
+        style[mxConstants.STYLE_IMAGE_HEIGHT]=90;
+        style[mxConstants.STYLE_IMAGE_ALIGN]=mxConstants.ALIGN_CENTER;
+        style[mxConstants.STYLE_FILLCOLOR]='#446299';
+        style[mxConstants.STYLE_STROKECOLOR]='#446299';
+        //Label
+        style[mxConstants.STYLE_VERTICAL_ALIGN]= mxConstants.ALIGN_TOP;
+        style[mxConstants.STYLE_VERTICAL_LABEL_POSITION]= mxConstants.ALIGN_BOTTOM;
+        style[mxConstants.STYLE_LABEL_WIDTH]= 90;
+        this.getStylesheet().putCellStyle('style1',style);
+    }
     //开始绘制
     MyGraph.prototype.initDraw = function(){
         var _self = this;
         // 尝试开始更新绘制
         _self.getModel().beginUpdate();
         try{
+            //默认会显示开始->时间
+            var containerHeight = _self.container.offsetHeight,
+                offsetTop = (containerHeight - 90)/2,
+                v1 = _self.insertVertex(_self.parent, 'begin', '开始', 20, offsetTop, 90, 90, 'style1;image;image=images/begin.png');
+                v2 = _self.insertVertex(_self.parent, 'time', _self.myUtil().getLocalTime(), 200, offsetTop, 90, 90, 'style1;image;image=images/time.png');
+                e1 = _self.insertEdge(_self.parent, null, '', v1, v2);
+
             var sideImgs = _self.cellImages;
             for(var i=0;i < sideImgs.length;i++){
                 var funct;
                 (function(i){
                     funct=function(graph, evt, target, x, y){
-                        var style={};
-                        style[mxConstants.STYLE_SHAPE] = mxConstants.SHAPE_LABEL;
-                        style[mxConstants.STYLE_IMAGE]=sideImgs[i].getAttribute('src');
-                        style[mxConstants.STYLE_IMAGE_WIDTH]=90;
-                        style[mxConstants.STYLE_IMAGE_HEIGHT]=90;
-                        style[mxConstants.STYLE_IMAGE_ALIGN]=mxConstants.ALIGN_CENTER;
-                        style[mxConstants.STYLE_FILLCOLOR]='transparent';
-                        style[mxConstants.STYLE_STROKECOLOR]='transparent';
-                        graph.getStylesheet().putCellStyle('style2',style);
-
-                        function addStyle(styleName){
-                            var styleObj=graph.getStylesheet().styles;
-                            if(styleName in styleObj){
-                                var arr=[];
-                                for(var i in styleObj[styleName]){
-                                    arr.push(i+'='+styleObj[styleName][i]);
-                                }
-                                return new mxCell('',new mxGeometry(0, 0, 90, 90),arr.join(';'));
-                            }
-                        }
-
-                        var cell=addStyle('style2')
-                        // var cell = new mxCell('', new mxGeometry(0, 0, 90, 90),'style2');
+                        var cell = new mxCell('', new mxGeometry(0, 0, 90, 90),'style1;perimeterSpacing=4;strokeWidth=4;labelBackgroundColor=white;fontStyle=1');
+                        //赋予目标组标志位(自定义)
+                        cell.cellType = sideImgs[i].dataset.flag;
                         cell.vertex = true;
+                        graph.setCellStyles(mxConstants.STYLE_IMAGE, "image;image="+sideImgs[i].getAttribute('src'), [cell]); //单独设置cell的背景图
+                        graph.getTooltipForCell(cell);
                         var cells = graph.importCells([cell], x, y, target);
 
                         if (cells != null && cells.length > 0)
@@ -234,7 +324,23 @@
             _self.getModel().endUpdate();
         }
     }
-
+    //创建右键菜单
+    MyGraph.prototype.createPopupMenu = function(graph, menu, cell, evt){
+        var _self = this;
+        if (cell != null){
+            menu.addItem('删除', 'images/delete2.png', function()
+            {
+                _self.removeSelectedCell();
+            });
+        }
+        else{
+            menu.addItem('No-Cell Item', 'images/warning.png', function()
+            {
+               return;
+            });
+        }
+        menu.addSeparator();
+    }
 
 
 
