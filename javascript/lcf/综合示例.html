@@ -12,8 +12,9 @@
         .sidebar .shape-item span{ color: #666; }
         .sidebar .shape-item img:hover{transform:scale(1.15);}
         .com-box .main{position:absolute; left:140px; margin: 0; width:1060px; overflow: auto; background:url('images/grid.gif');}
-
         .btn-wrap{padding-left:160px; width:1080px;}
+        #js-autoLayout{height: 38px;margin-right: 13px;position: relative;top: -1px;}
+        #input-xml{ text-align: center; margin-bottom: 30px; }
     </style>
 </head>
 <body>
@@ -46,7 +47,16 @@
     </div>
 
     <div class="btn-wrap">
-        <button id="js-autoLayout">自动优化布局</button>
+        <select id="js-autoLayout">
+            <option value="mxFastOrganicLayout">mxFastOrganicLayout</option>
+            <option value="mxCircleLayout">mxCircleLayout</option>
+            <option value="mxCompactTreeLayout">mxCompactTreeLayout</option>
+            <option value="mxPartitionLayout">mxPartitionLayout</option>
+            <option value="mxEdgeLabelLayout">mxEdgeLabelLayout</option>
+            <option value="mxParallelEdgeLayout">mxParallelEdgeLayout-带参</option>
+            <option value="mxRadialTreeLayout">mxRadialTreeLayout</option>
+            <option value="mxStackLayout">mxStackLayout-带参</option>
+        </select>
         <button id="js-btnGetXml">导出xml</button>
         <button id="js-btnSetXml">加载xml</button>
         <button id="js-btnEnlarge">放大</button>
@@ -71,7 +81,8 @@
       reader.readAsText(file);
     }
     </script>
-    <div>
+    <div id="input-xml">
+        <h6>输入xml，然后点击“加载xml按钮”</h6>
         <textarea id="js-txt" cols="60" rows="10"></textarea>
     </div>
     <script type="text/javascript">mxBasePath = '../src';</script>
@@ -85,6 +96,10 @@
         cellImages: 拖拽的图片集
      */
     function MyGraph(options){
+        var fileSupport = window.File != null && window.FileReader != null && window.FileList != null;
+        if (!fileSupport && !mxClient.isBrowserSupported()){
+            mxUtils.error('Browser is not supported!', 200, false);
+        }
         //继承超类-构造函数
         this.container = options.container;
         this.cellImages = options.cellImages;
@@ -95,6 +110,7 @@
         this.setGlobalStyle();
         this.initDraw();
         this.initEvent();
+        this.initClipboard();
     }
     MyGraph.prototype = new mxGraph();
     MyGraph.prototype.constructor = MyGraph;
@@ -125,6 +141,8 @@
         this.setPanning(true);
         this.orderCells(true);//使线在所有元素的底下,吸附元素
         this.setTooltips(true); //允许显示tooltip
+        this.setAutoSizeCells(true); //cell自适应拉伸
+        this.setAllowDanglingEdges(false); //禁止悬空edges
         this.edgeLabelsMovable = false;
         //安装右键菜单,且阻止默认右键行为
         mxEvent.disableContextMenu(this.container);
@@ -138,7 +156,8 @@
             cellValue += cell.value ? 'Label：' + cell.value : '';
             return cellValue;
         }
-
+        this.rubberband = new mxRubberband(this); //橡皮筋，允许按住鼠标选择多个cell
+        this.undoManager = new mxUndoManager(); //撤销和恢复对象
     }
     //初始化事件
     MyGraph.prototype.initEvent = function(){
@@ -178,23 +197,388 @@
               // mxLog.debug('connect', edge, source.id, target.id, sourcePortId, targetPortId);
         });
 
+        //监听撤销和恢复操作
+        var listener = function(sender, evt){
+          _self.undoManager.undoableEditHappened(evt.getProperty('edit'));
+        };
+        this.getModel().addListener(mxEvent.UNDO, listener);
+        this.getView().addListener(mxEvent.UNDO, listener);
+        this.getModel().addListener(mxEvent.REDO, listener);
+        this.getView().addListener(mxEvent.REDO, listener);
+
+
+        // 上下左右键盘监听
+        var nudge = function(keyCode){
+            if (!_self.isSelectionEmpty()){
+                var dx = 0;
+                var dy = 0;
+                if (keyCode == 37){
+                    dx = -1;
+                }
+                else if (keyCode == 38){
+                    dy = -1;
+                }
+                else if (keyCode == 39){
+                    dx = 1;
+                }
+                else if (keyCode == 40){
+                    dy = 1;
+                }
+                _self.moveCells(_self.getSelectionCells(), dx, dy);
+            }
+        };
+        var keyHandler = new mxKeyHandler(this);
+        // Ignores enter keystroke. Remove this line if you want the
+        // enter keystroke to stop editing
+        keyHandler.enter = function() {};
+        keyHandler.bindKey(37, function(){
+            nudge(37);
+        });
+        keyHandler.bindKey(38, function(){
+            nudge(38);
+        });
+        keyHandler.bindKey(39, function(){
+            nudge(39);
+        });
+        keyHandler.bindKey(40, function(){
+            nudge(40);
+        });
+
+        //拖拽外部图片（转换成base64）
+        mxEvent.addListener(this.container, 'dragover', function(evt){
+            if (_self.isEnabled()){
+                evt.stopPropagation();
+                evt.preventDefault();
+            }
+        });
+        mxEvent.addListener(this.container, 'drop', function(evt) {
+            if (_self.isEnabled()){
+                evt.stopPropagation();
+                evt.preventDefault();
+                // Gets drop location point for vertex
+                var pt = mxUtils.convertPoint(_self.container, mxEvent.getClientX(evt), mxEvent.getClientY(evt));
+                var tr = _self.view.translate;
+                var scale = _self.view.scale;
+                var x = pt.x / scale - tr.x;
+                var y = pt.y / scale - tr.y;
+                // Converts local images to data urls
+                var filesArray = event.dataTransfer.files;
+                for (var i = 0; i < filesArray.length; i++)
+                {
+                    _self.handleDrop(_self, filesArray[i], x + i * 10, y + i * 10);
+                }
+            }
+        });
+    }
+    //拖拽图片转换成base64以xml形式插入contianer
+    MyGraph.prototype.handleDrop = function(graph, file, x, y){
+        if (file.type.substring(0, 5) == 'image'){
+            var reader = new FileReader();
+            reader.onload = function(e){
+                // Gets size of image for vertex
+                var data = e.target.result;
+
+                // SVG needs special handling to add viewbox if missing and
+                // find initial size from SVG attributes (only for IE11)
+                if (file.type.substring(0, 9) == 'image/svg'){
+                    var comma = data.indexOf(',');
+                    var svgText = atob(data.substring(comma + 1));
+                    var root = mxUtils.parseXml(svgText);
+                    // Parses SVG to find width and height
+                    if (root != null){
+                        var svgs = root.getElementsByTagName('svg');
+                        if (svgs.length > 0){
+                            var svgRoot = svgs[0];
+                            var w = parseFloat(svgRoot.getAttribute('width'));
+                            var h = parseFloat(svgRoot.getAttribute('height'));
+                            // Check if viewBox attribute already exists
+                            var vb = svgRoot.getAttribute('viewBox');
+                            if (vb == null || vb.length == 0)
+                            {
+                                svgRoot.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
+                            }
+                            // Uses width and height from viewbox for
+                            // missing width and height attributes
+                            else if (isNaN(w) || isNaN(h))
+                            {
+                                var tokens = vb.split(' ');
+                                if (tokens.length > 3)
+                                {
+                                    w = parseFloat(tokens[2]);
+                                    h = parseFloat(tokens[3]);
+                                }
+                            }
+                            w = Math.max(1, Math.round(w));
+                            h = Math.max(1, Math.round(h));
+                            data = 'data:image/svg+xml,' + btoa(mxUtils.getXml(svgs[0], '\n'));
+                            graph.insertVertex(null, null, '', x, y, w, h, 'shape=image;image=' + data + ';verticalLabelPosition=bottom;verticalAlign=top');
+                        }
+                    }
+                }
+                else{
+                    var img = new Image();
+                    img.onload = function(){
+                        var w = Math.max(1, img.width);
+                        var h = Math.max(1, img.height);
+                        // Converts format of data url to cell style value for use in vertex
+                        var semi = data.indexOf(';');
+                        if (semi > 0)
+                        {
+                            data = data.substring(0, semi) + data.substring(data.indexOf(',', semi + 1));
+                        }
+
+                        graph.insertVertex(null, null, '', x, y, w, h, 'shape=image;image=' + data + ';verticalLabelPosition=bottom;verticalAlign=top');
+                    };
+                    img.src = data;
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+    //处理ctrl+c || ctrl+v复制粘贴 cell
+    MyGraph.prototype.initClipboard = function(){
+        var _self = this;
+        // Public helper method for shared clipboard.
+        mxClipboard.cellsToString = function(cells){
+            var codec = new mxCodec();
+            var model = new mxGraphModel();
+            var parent = model.getChildAt(model.getRoot(), 0);
+            for (var i = 0; i < cells.length; i++){
+                model.add(parent, cells[i]);
+            }
+            return mxUtils.getXml(codec.encode(model));
+        };
+
+        // Focused but invisible textarea during control or meta key events
+        var textInput = document.createElement('textarea');
+        mxUtils.setOpacity(textInput, 0);
+        textInput.style.width = '1px';
+        textInput.style.height = '1px';
+        var restoreFocus = false;
+        var gs = _self.gridSize;
+        var lastPaste = null;
+        var dx = 0;
+        var dy = 0;
+
+        // Workaround for no copy event in IE/FF if empty
+        textInput.value = ' ';
+        // Shows a textare when control/cmd is pressed to handle native clipboard actions
+        mxEvent.addListener(document, 'keydown', function(evt){
+            // No dialog visible
+            var source = mxEvent.getSource(evt);
+            if (_self.isEnabled() && !_self.isMouseDown && !_self.isEditing() && source.nodeName != 'INPUT'){
+                if (evt.keyCode == 224 /* FF */ || (!mxClient.IS_MAC && evt.keyCode == 17 /* Control */) || (mxClient.IS_MAC && evt.keyCode == 91 /* Meta */)){
+                    // Cannot use parentNode for check in IE
+                    if (!restoreFocus){
+                        // Avoid autoscroll but allow handling of events
+                        textInput.style.position = 'absolute';
+                        textInput.style.left = (_self.container.scrollLeft + 10) + 'px';
+                        textInput.style.top = (_self.container.scrollTop + 10) + 'px';
+                        _self.container.appendChild(textInput);
+                        restoreFocus = true;
+                        textInput.focus();
+                        textInput.select();
+                    }
+                }
+            }
+        });
+
+        // Restores focus on graph container and removes text input from DOM
+        mxEvent.addListener(document, 'keyup', function(evt){
+            if (restoreFocus && (evt.keyCode == 224 /* FF */ || evt.keyCode == 17 /* Control */ ||
+                evt.keyCode == 91 /* Meta */)){
+                restoreFocus = false;
+                if (!_self.isEditing()){
+                    _self.container.focus();
+                }
+                textInput.parentNode.removeChild(textInput);
+            }
+        });
+
+        // Inserts the XML for the given cells into the text input for copy
+        var copyCells = function(graph, cells){
+            if (cells.length > 0){
+                var clones = _self.cloneCells(cells);
+                // Checks for orphaned relative children and makes absolute
+                for (var i = 0; i < clones.length; i++){
+                    var state = _self.view.getState(cells[i]);
+                    if (state != null){
+                        var geo = _self.getCellGeometry(clones[i]);
+                        if (geo != null && geo.relative){
+                            geo.relative = false;
+                            geo.x = state.x / state.view.scale - state.view.translate.x;
+                            geo.y = state.y / state.view.scale - state.view.translate.y;
+                        }
+                    }
+                }
+                textInput.value = mxClipboard.cellsToString(clones);
+            }
+            textInput.select();
+            lastPaste = textInput.value;
+        };
+
+        // Handles copy event by putting XML for current selection into text input
+        mxEvent.addListener(textInput, 'copy', mxUtils.bind(this, function(evt){
+            if (_self.isEnabled() && !_self.isSelectionEmpty()){
+                copyCells(_self, mxUtils.sortCells(_self.model.getTopmostCells(_self.getSelectionCells())));
+                dx = 0;
+                dy = 0;
+            }
+        }));
+
+        // Handles cut event by removing cells putting XML into text input
+        mxEvent.addListener(textInput, 'cut', mxUtils.bind(this, function(evt){
+            if (_self.isEnabled() && !_self.isSelectionEmpty()){
+                copyCells(_self, _self.removeCells());
+                dx = -gs;
+                dy = -gs;
+            }
+        }));
+
+        // Merges XML into existing graph and layers
+        var importXml = function(xml, dx, dy){
+            dx = (dx != null) ? dx : 0;
+            dy = (dy != null) ? dy : 0;
+            var cells = []
+
+            try{
+                var doc = mxUtils.parseXml(xml);
+                var node = doc.documentElement;
+                if (node != null)
+                {
+                    var model = new mxGraphModel();
+                    var codec = new mxCodec(node.ownerDocument);
+                    codec.decode(node, model);
+                    var childCount = model.getChildCount(model.getRoot());
+                    var targetChildCount = _self.model.getChildCount(_self.model.getRoot());
+                    // Merges existing layers and adds new layers
+                    _self.model.beginUpdate();
+                    try{
+                        for (var i = 0; i < childCount; i++) {
+                            var parent = model.getChildAt(model.getRoot(), i);
+                            // Adds cells to existing layers if not locked
+                            if (targetChildCount > i){
+                                // Inserts into active layer if only one layer is being pasted
+                                var target = (childCount == 1) ? _self.getDefaultParent() : _self.model.getChildAt(_self.model.getRoot(), i);
+                                if (!_self.isCellLocked(target)){
+                                    var children = model.getChildren(parent);
+                                    cells = cells.concat(_self.importCells(children, dx, dy, target));
+                                }
+                            }
+                            else{
+                                // Delta is non cascading, needs separate move for layers
+                                parent = _self.importCells([parent], 0, 0, _self.model.getRoot())[0];
+                                var children = _self.model.getChildren(parent);
+                                _self.moveCells(children, dx, dy);
+                                cells = cells.concat(children);
+                            }
+                        }
+                    }
+                    finally{
+                        _self.model.endUpdate();
+                    }
+                }
+            }
+            catch (e){
+                alert(e);
+                throw e;
+            }
+            return cells;
+        };
+
+        // Parses and inserts XML into graph
+        var pasteText = function(text){
+            var xml = mxUtils.trim(text);
+            var x = _self.container.scrollLeft / _self.view.scale - _self.view.translate.x;
+            var y = _self.container.scrollTop / _self.view.scale - _self.view.translate.y;
+            if (xml.length > 0){
+                if (lastPaste != xml){
+                    lastPaste = xml;
+                    dx = 0;
+                    dy = 0;
+                }
+                else{
+                    dx += gs;
+                    dy += gs;
+                }
+                // Standard paste via control-v
+                if (xml.substring(0, 14) == '<mxGraphModel>')
+                {
+                    _self.setSelectionCells(importXml(xml, dx, dy));
+                    _self.scrollCellToVisible(_self.getSelectionCell());
+                }
+            }
+        };
+
+        // Cross-browser function to fetch text from paste events
+        var extractGraphModelFromEvent = function(evt){
+            var data = null;
+            if (evt != null){
+                var provider = (evt.dataTransfer != null) ? evt.dataTransfer : evt.clipboardData;
+                if (provider != null){
+                    if (document.documentMode == 10 || document.documentMode == 11){
+                        data = provider.getData('Text');
+                    }
+                    else {
+                        data = (mxUtils.indexOf(provider.types, 'text/html') >= 0) ? provider.getData('text/html') : null;
+                        if (mxUtils.indexOf(provider.types, 'text/plain' && (data == null || data.length == 0))){
+                            data = provider.getData('text/plain');
+                        }
+                    }
+                }
+            }
+            return data;
+        };
+
+        // Handles paste event by parsing and inserting XML
+        mxEvent.addListener(textInput, 'paste', function(evt){
+            // Clears existing contents before paste - should not be needed
+            // because all text is selected, but doesn't hurt since the
+            // actual pasting of the new text is delayed in all cases.
+            textInput.value = '';
+            if (_self.isEnabled()){
+                var xml = extractGraphModelFromEvent(evt);
+                if (xml != null && xml.length > 0) {
+                    pasteText(xml);
+                }
+                else{
+                    // Timeout for new value to appear
+                    window.setTimeout(mxUtils.bind(this, function() {
+                        pasteText(textInput.value);
+                    }), 0);
+                }
+            }
+            textInput.select();
+        });
+
     }
     //自定义布局-工厂模式
     MyGraph.prototype.autoLayout = function(){
-        var args = Array.prototype.slice.call(arguments),
+        var _self = this,
+            args = Array.prototype.slice.call(arguments),
             way = args.shift();
         args.unshift(this);
-        if(way in this.layoutWay){
+        this.getModel().beginUpdate();
+        try{
+            if(way in this.layoutWay){
 
-            var fConstructor = this, fNewConstr = function() { 
-                fConstructor.layoutWay[way].apply(this, args); 
-            };
-            fNewConstr.prototype = fConstructor.layoutWay[way].prototype;
-            return new fNewConstr().execute(this.parent);
+                var fConstructor = this, fNewConstr = function() {
+                    fConstructor.layoutWay[way].apply(this, args);
+                };
+                fNewConstr.prototype = fConstructor.layoutWay[way].prototype;
+                return new fNewConstr().execute(this.parent);
 
-        }else{
-            console.log(new mxFastOrganicLayout(this))
-            new mxFastOrganicLayout(this).execute(this.parent); //默认自动优化布局
+            }else{
+                console.log(new mxFastOrganicLayout(this))
+                new mxFastOrganicLayout(this).execute(this.parent); //默认自动优化布局
+            }
+        }finally{
+            //布局时需要有animation
+            var morph = new mxMorphing(this);
+            morph.addListener(mxEvent.DONE, function() {
+                _self.getModel().endUpdate();
+            });
+            morph.startAnimation();
         }
     }
     //获取Graph xml 用于保存至保存数据库
@@ -220,8 +604,9 @@
     //删除选中cell
     MyGraph.prototype.removeSelectedCell = function(){
         var cells = this.getSelectionCells();
-        // console.log(cells[0]);
-        // console.log(cells[0].getView())
+        if(cells[0].id === 'time' || cells[0].id === 'begin'){
+            return;
+        }
         this.removeCells(cells);
     }
     //导出图片
@@ -327,17 +712,53 @@
     //创建右键菜单
     MyGraph.prototype.createPopupMenu = function(graph, menu, cell, evt){
         var _self = this;
+        var publicAction = function(){
+            menu.addSeparator();
+            menu.addItem('放大', 'images/zoomin.gif', function()
+            {
+                _self.zoomIn();
+            });
+            menu.addItem('缩小', 'images/zoomout.gif', function()
+            {
+                _self.zoomOut();
+            });
+            menu.addItem('还原', 'images/zoomactual.gif', function()
+            {
+                _self.zoomActual();
+            });
+            menu.addSeparator();
+            menu.addItem('打印', 'images/print.gif',function(evt)
+            {
+                var preview = new mxPrintPreview(_self, 1);
+                preview.open();
+            });
+            menu.addSeparator();
+            menu.addItem('撤销', 'images/undo.gif',function(evt)
+            {
+                if(_self.undoManager.canUndo()){
+                    _self.undoManager.undo();
+                }
+            });
+            menu.addItem('恢复', 'images/redo.gif',function(evt)
+            {
+                if(_self.undoManager.canRedo()){
+                    _self.undoManager.redo();
+                }
+            });
+        }
         if (cell != null){
             menu.addItem('删除', 'images/delete2.png', function()
             {
                 _self.removeSelectedCell();
             });
+            publicAction();
         }
         else{
             menu.addItem('No-Cell Item', 'images/warning.png', function()
             {
                return;
             });
+            publicAction();
         }
         menu.addSeparator();
     }
@@ -363,8 +784,14 @@
         }
 
         //自动优化布局
-        document.querySelector('#js-autoLayout').onclick = function(){
-            myGraph.autoLayout();
+        document.querySelector('#js-autoLayout').onchange = function(){
+            if(this.value === 'mxParallelEdgeLayout'){
+                myGraph.autoLayout(this.value, true, 1, 2);
+            }else if(this.value === 'mxStackLayout'){
+                myGraph.autoLayout(this.value, true);
+            }else{
+                myGraph.autoLayout(this.value);
+            }
         };
 
         //删除选中的cell
