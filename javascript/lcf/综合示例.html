@@ -62,6 +62,7 @@
         <button id="js-btnEnlarge">放大</button>
         <button id="js-btnShrinkDown">缩小</button>
         <button id="js-btnExportImage">导出图片</button>
+        <button id="js-btnNotConnect">设置排重图标不能连接目标组</button>
     </div>
     <div style="display: none;">
         <input type="file" name="" id="file" onchange="processFiles(this.files)">
@@ -103,6 +104,7 @@
         //继承超类-构造函数
         this.container = options.container;
         this.cellImages = options.cellImages;
+        this.cellImgContianer = options.cellImgContianer;
         mxGraph.call(this, this.container);
         this.parent = this.getDefaultParent();
         this.defineConstantForGraph();
@@ -159,28 +161,16 @@
         this.rubberband = new mxRubberband(this); //橡皮筋，允许按住鼠标选择多个cell
         this.undoManager = new mxUndoManager(); //撤销和恢复对象
     }
+    //定义无效连接
+    MyGraph.prototype.defineInvalidConnect = function(instance){
+        this.multiplicities.push(instance);
+    }
     //初始化事件
     MyGraph.prototype.initEvent = function(){
         var _self = this;
-
         //监听cell变化
         this.getModel().addListener(mxEvent.CHANGE, function(sender, event){
-                _self.getModel().beginUpdate();
-                event.consume();
-                try {
-                        var changes = event.getProperty('edit').changes;
-                        console.info(changes);return;
-                        console.log({
-                            id:parseInt(changes.cell.id),
-                            x:changes.geometry.x,
-                            y:changes.geometry.y,
-                            w:changes.geometry.width,
-                            h:changes.geometry.height
-                        })
-                } finally {
-                    _self.getModel().endUpdate();
-                    _self.refresh();
-                }
+              _self.validateGraph();
         });
 
         //连接时的监听？
@@ -267,6 +257,25 @@
                 {
                     _self.handleDrop(_self, filesArray[i], x + i * 10, y + i * 10);
                 }
+            }
+        });
+        //双击插入图标
+        mxEvent.addListener(this.cellImgContianer, 'dblclick', function(evt){
+            var dx = 0, cell = new mxCell('', new mxGeometry(0, 0, 90, 90),'style1;perimeterSpacing=4;strokeWidth=4;labelBackgroundColor=white;fontStyle=1');
+            //赋予目标组标志位(自定义)
+            cell.cellType = evt.target.dataset.flag;
+            cell.vertex = true;
+            _self.setCellStyles(mxConstants.STYLE_IMAGE, "image;image="+evt.target.getAttribute('src'), [cell]); //单独设置cell的背景图
+            _self.getTooltipForCell(cell);
+            while(Boolean(_self.getCellAt(dx,0,_self.getDefaultParent()))){
+                //图片高度、宽度,因为左右两个角都在cell里面，所以会执行两次，所以需要再减去90
+                dx += 90;
+            }
+            var cells = _self.importCells([cell], dx===0 ? 0 : dx-90, 0, _self.getDefaultParent());
+            if (cells != null && cells.length > 0)
+            {
+             _self.scrollCellToVisible(cells[0]);
+             _self.setSelectionCells(cells);
             }
         });
     }
@@ -683,7 +692,7 @@
                 var funct;
                 (function(i){
                     funct=function(graph, evt, target, x, y){
-                        var cell = new mxCell('', new mxGeometry(0, 0, 90, 90),'style1;perimeterSpacing=4;strokeWidth=4;labelBackgroundColor=white;fontStyle=1');
+                        var cell = new mxCell(sideImgs[i].alt || '', new mxGeometry(0, 0, 90, 90),'style1;perimeterSpacing=4;strokeWidth=4;labelBackgroundColor=white;fontStyle=1');
                         //赋予目标组标志位(自定义)
                         cell.cellType = sideImgs[i].dataset.flag;
                         cell.vertex = true;
@@ -764,12 +773,13 @@
     }
 
 
-
         var wrap=document.getElementById('wrap');
+        var cellImgContianer = document.querySelector('.sidebar');
         var cellImgs = document.querySelectorAll('.sidebar img');
         var myGraph = new MyGraph({
             container: wrap,
-            cellImages: cellImgs
+            cellImages: cellImgs,
+            cellImgContianer: cellImgContianer
         });
 
         //通过xml还原Graph
@@ -816,6 +826,21 @@
         document.querySelector('#js-btnExportImage').onclick = function(){
             myGraph.exportGraphToImage();
         };
+
+        //设置两个图标不能连接
+        function once(dom, event, callback) {
+            var handle = function() {
+                callback();
+                dom.removeEventListener(event, handle, false);
+            }
+            dom.addEventListener(event, handle, false);
+        }
+
+        once(document.querySelector('#js-btnNotConnect'), 'click', function(){
+            myGraph.defineInvalidConnect(new mxMultiplicity(
+           false, '目标组', null, null, 0, 0, ['排重'],
+           '排重不能连接到目标组'));
+        });
 
     </script>
 </body>
