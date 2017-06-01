@@ -183,7 +183,7 @@
 
                         var style={};
                         style[mxConstants.STYLE_SHAPE] = mxConstants.SHAPE_LABEL;
-                        // style[mxConstants.STYLE_IMAGE]=sideImgs[i].getAttribute('src');
+                        style[mxConstants.STYLE_IMAGE]=sideImgs[i].getAttribute('src');
                         style[mxConstants.STYLE_IMAGE_WIDTH]=90;
                         style[mxConstants.STYLE_IMAGE_HEIGHT]=90;
                         style[mxConstants.STYLE_IMAGE_ALIGN]=mxConstants.ALIGN_CENTER;
@@ -191,20 +191,20 @@
                         style[mxConstants.STYLE_STROKECOLOR]='transparent';
                         graph.getStylesheet().putCellStyle('style2',style);
 
-                        // function addStyle(styleName){
-                        //     var styleObj=graph.getStylesheet().styles;
-                        //     if(styleName in styleObj){
-                        //         var arr=[];
-                        //         for(var i in styleObj[styleName]){
-                        //             arr.push(i+'='+styleObj[styleName][i]);
-                        //         }
-                        //         return new mxCell('',new mxGeometry(0, 0, 90, 90),arr.join(';'));
-                        //     }
+                        function addStyle(styleName){
+                            var styleObj=graph.getStylesheet().styles;
+                            if(styleName in styleObj){
+                                var arr=[];
+                                for(var i in styleObj[styleName]){
+                                    arr.push(i+'='+styleObj[styleName][i]);
+                                }
+                                return new mxCell('',new mxGeometry(0, 0, 90, 90),arr.join(';'));
+                            }
                             
-                        // }
+                        }
 
-                        // var cell=addStyle('style2')
-                        var cell = new mxCell('', new mxGeometry(0, 0, 90, 90),'style2;image="+sideImgs[i].getAttribute('src')');
+                        var cell=addStyle('style2')
+                        // var cell = new mxCell('', new mxGeometry(0, 0, 90, 90),'style2;image="+sideImgs[i].getAttribute('src')');
                         cell.vertex = true;
                         var cells = graph.importCells([cell], x, y, target);
 
