@@ -64,37 +64,118 @@
         <button id="js-btnExportImage">导出图片</button>
         <button id="js-btnNotConnect">设置排重图标不能连接目标组</button>
     </div>
-    <div style="display: none;">
-        <input type="file" name="" id="file" onchange="processFiles(this.files)">
-    </div>
-    <script>
-        function processFiles(files) {
-      var file = files[0];
- 
-       
-      var reader = new FileReader();
-      reader.onload = function (e) {
-        // 这个事件发生，意为着数据准备好了
-        // 把它复制到页面的<div>元素中
-        var output = document.getElementById("js-txt");  
-        output.textContent = e.target.result;
-      };
-      reader.readAsText(file);
-    }
+    <!--对应弹窗内容模板，对应每个栏目组cell 的 cellType，对于每个栏目组的内容写在这里面，通过ajax获取数据进行渲染-->
+    <!--建议用表单提交-->
+    <!--参照[https://aui.github.io/art-template][art-template]语法-->
+    <!--时间节点-->
+    <script id="time" type="text/html">
+        <div class="inquire-container">
+            <label for="nodeName">时间节点时间值</label>
+            <input type="text" name="nodeName" id="nodeName"  value="{{cell.value}}" />
+            <input type="hidden" name="guid" id="guid" value="{{cell.guid}}"> <!--cell 唯一标识-->
+            <ul>
+                <li>我是通过ajax获取的数据</li>
+                {{each list}}
+                    <li>{{$value}}</li>
+                {{/each}}
+            </ul>
+            <button class="cell-save-btn">保存</button>
+        </div>
     </script>
+    <!--查询-->
+    <script id="inquire" type="text/html">
+        <div class="inquire-container">
+            <label for="nodeName">查询节点名称</label>
+            <input type="text" name="nodeName" id="nodeName"  value="{{cell.value}}" />
+            <input type="hidden" name="guid" id="guid" value="{{cell.guid}}"> <!--cell 唯一标识-->
+            <ul>
+                <li>我是通过ajax获取的数据</li>
+                {{each list}}
+                    <li>{{$value}}</li>
+                {{/each}}
+            </ul>
+            <button class="cell-save-btn">保存</button>
+        </div>
+    </script>
+    <!--排重-->
+    <script id="heavy_discharge" type="text/html">
+        <div class="heavy_discharge-container">
+            <label for="nodeName">排重节点名称</label>
+            <input type="text" name="nodeName" id="nodeName"  value="{{cell.value}}" />
+            <input type="hidden" name="guid" id="guid" value="{{cell.guid}}">
+            <ul>
+                <li>我是通过ajax获取的数据</li>
+                {{each list}}
+                    <li>{{$value}}</li>
+                {{/each}}
+            </ul>
+            <button class="cell-save-btn">保存</button>
+        </div>
+    </script>
+    <!--抽样-->
+    <script id="sampling" type="text/html">
+        <div class="sampling-container">
+            <label for="nodeName">抽样节点名称</label>
+            <input type="text" name="nodeName" id="nodeName"  value="{{cell.value}}" />
+            <input type="hidden" name="guid" id="guid" value="{{cell.guid}}">
+            <ul>
+                <li>我是通过ajax获取的数据</li>
+                {{each list}}
+                    <li>{{$value}}</li>
+                {{/each}}
+            </ul>
+            <button class="cell-save-btn">保存</button>
+        </div>
+    </script>
+
+    <!--目标组-->
+    <script id="target_group" type="text/html">
+        <div class="target_group-container">
+            <label for="nodeName">目标组节点名称</label>
+            <input type="text" name="nodeName" id="nodeName"  value="{{cell.value}}" />
+            <input type="hidden" name="guid" id="guid" value="{{cell.guid}}">
+            <ul>
+                <li>我是通过ajax获取的数据</li>
+                {{each list}}
+                    <li>{{$value}}</li>
+                {{/each}}
+            </ul>
+            <button class="cell-save-btn">保存</button>
+        </div>
+    </script>
+
+    <!--短信-->
+    <script id="SMS" type="text/html">
+        <div class="SMS-container">
+            <label for="nodeName">短信节点名称</label>
+            <input type="text" name="nodeName" id="nodeName"  value="{{cell.value}}" />
+            <input type="hidden" name="guid" id="guid" value="{{cell.guid}}">
+            <ul>
+                <li>我是通过ajax获取的数据</li>
+                {{each list}}
+                    <li>{{$value}}</li>
+                {{/each}}
+            </ul>
+            <button class="cell-save-btn">保存</button>
+        </div>
+    </script>
+
     <div id="input-xml">
         <h6>输入xml，然后点击“加载xml按钮”</h6>
         <textarea id="js-txt" cols="60" rows="10"></textarea>
     </div>
     <script type="text/javascript">mxBasePath = '../src';</script>
     <script type="text/javascript" src="../src/js/mxClient.js"></script>
+    <script type="text/javascript" src="../src/js/template-web.js"></script>
     <script>
 
     //MyGraph类
     /*
         参数：
         container: 绘图容器，必须
-        cellImages: 拖拽的图片集
+        cellImages: 拖拽的栏目图片
+        cellImgContianer 栏目组容器
+        modalWindowCallback 点击cell时弹框出现执行的回调函数
      */
     function MyGraph(options){
         var fileSupport = window.File != null && window.FileReader != null && window.FileList != null;
@@ -105,6 +186,7 @@
         this.container = options.container;
         this.cellImages = options.cellImages;
         this.cellImgContianer = options.cellImgContianer;
+        this.modalWindowCallback = options.modalWindowCallback
         mxGraph.call(this, this.container);
         this.parent = this.getDefaultParent();
         this.defineConstantForGraph();
@@ -117,8 +199,22 @@
     MyGraph.prototype = new mxGraph();
     MyGraph.prototype.constructor = MyGraph;
     MyGraph.prototype.defineConstantForGraph = function(){
+        //ports（渲染对应栏目组的接口）
+        this.ports = {
+
+        }
+        //弹框size[width,height]
+        this.windowSize = {
+            time: [400, 300],
+            inquire: [800, 400],
+            heavy_discharge: [600, 600],
+            sampling: [200, 200],
+            target_group: [300, 600],
+            SMS: [700, 700]
+        }
         //栏目组
         this.column = {
+            time: '时间',
             inquire: '查询',
             heavy_discharge: '排重',
             sampling: '抽样',
@@ -167,24 +263,63 @@
     }
     //初始化事件
     MyGraph.prototype.initEvent = function(){
-        var _self = this;
+        var _self = this, flag = false;
         //监听cell变化
         this.getModel().addListener(mxEvent.CHANGE, function(sender, event){
-              _self.validateGraph();
+            _self.validateGraph();
+            //识别source和target只能有一条线
+            var changes = event.getProperty('edit').changes;
+            var childs = changes.filter(function(item){
+                return item.child;
+            })
+            if(childs.length > 0){
+                // console.log(childs)
+                var child = childs[0].child;
+                var parent = childs[0].parent.children;
+                // console.log(parent);
+                var edges = parent.filter(function(item){
+                    return item.edge;
+                })
+                // console.log(edges);
+                // console.info(changes);
+                if(_self.connectTarget && _self.connectSource){
+                    for (var i = edges.length - 1; i >= 0; i--) {
+                        if(edges[i].source.guid === _self.connectTarget.guid && edges[i].target.guid === _self.connectSource.guid){
+                            flag = true;
+                            break;
+                        }
+                    }
+                    if(flag){
+                        if(_self.undoManager.canUndo()){
+                            alert("不能这样连线");
+                            _self.undoManager.undo();
+                        }
+                    }
+                }
+            }
+
         });
 
         //连接时的监听？
         this.connectionHandler.addListener(mxEvent.CONNECT, function(sender, evt){
-              var edge = evt.getProperty('cell');
-              var source = _self.getModel().getTerminal(edge, true);
-              var target = _self.getModel().getTerminal(edge, false);
+                var edge = evt.getProperty('cell');
+                var source = _self.getModel().getTerminal(edge, true);
+                var target = _self.getModel().getTerminal(edge, false);
+                console.log(edge)
+                console.log(source)
+                console.log(target)
+                _self.connectSource = source;
+                _self.connectTarget = target;
+                // _self.defineInvalidConnect(new mxMultiplicity(
+                // false, target.value, null, null, 0, 0, [source.value],
+                // '排重不能连接到目标组'));
 
-              var style = _self.getCellStyle(edge);
-              var sourcePortId = style[mxConstants.STYLE_SOURCE_PORT];
-              var targetPortId = style[mxConstants.STYLE_TARGET_PORT];
+                // var style = _self.getCellStyle(edge);
+                // var sourcePortId = style[mxConstants.STYLE_SOURCE_PORT];
+                // var targetPortId = style[mxConstants.STYLE_TARGET_PORT];
 
-              // mxLog.show();
-              // mxLog.debug('connect', edge, source.id, target.id, sourcePortId, targetPortId);
+                // mxLog.show();
+                // mxLog.debug('connect', edge, source.id, target.id, sourcePortId, targetPortId);
         });
 
         //监听撤销和恢复操作
@@ -261,9 +396,11 @@
         });
         //双击插入图标
         mxEvent.addListener(this.cellImgContianer, 'dblclick', function(evt){
-            var dx = 0, cell = new mxCell('', new mxGeometry(0, 0, 90, 90),'style1;perimeterSpacing=4;strokeWidth=4;labelBackgroundColor=white;fontStyle=1');
+            var dx = 0, cell = new mxCell(evt.target.alt, new mxGeometry(0, 0, 90, 90),'style1;perimeterSpacing=4;strokeWidth=4;labelBackgroundColor=white;fontStyle=1');
             //赋予目标组标志位(自定义)
             cell.cellType = evt.target.dataset.flag;
+            //定义唯一Id
+            cell.guid = cell.cellType + '-' + _self.myUtil().getGuid(8,16);
             cell.vertex = true;
             _self.setCellStyles(mxConstants.STYLE_IMAGE, "image;image="+evt.target.getAttribute('src'), [cell]); //单独设置cell的背景图
             _self.getTooltipForCell(cell);
@@ -278,6 +415,52 @@
              _self.setSelectionCells(cells);
             }
         });
+        //双击点击cell,弹出设置窗口
+        this.dblClick = function(evt, cell){
+            if (this.isEnabled() && !mxEvent.isConsumed(evt) && cell != null && this.isCellEditable(cell)){
+                if (this.model.isEdge(cell)){
+                    return;
+                }
+                else{
+                    this.myUtil().showModalWindow(this.getModalWindowConfig(cell));
+                }
+            }
+            // Disables any default behaviour for the double click
+            mxEvent.consume(evt);
+        }
+    }
+    //得到cell弹窗配置
+    MyGraph.prototype.getModalWindowConfig = function(cell){
+        //defineConstantForGraph
+        console.log(cell)
+        var _self = this;
+        if(cell.id === 'begin'){ return; }
+        function getTitle(){
+            return _self.column[cell.cellType || cell.id] + '节点';
+        }
+        function getContent(){
+            //可以通过异步获取数据，根据cell唯一标识和cellType类型，获取数据
+            var data = {
+                cell: cell,
+                list: ['文艺', '博客', '摄影', '电影', '民谣', '旅行', '吉他']
+            },
+            content = document.createElement('div'),
+            html = template(cell.cellType || cell.id, data); //cell.cellType与模板id保持一致，有可能是时间节点，所以可能情况是cell.id
+            content.innerHTML = html;
+            return content;
+        }
+        function getSize(){
+            //可以根据cell.cellType返回不同的宽度
+            return _self.windowSize[cell.cellType || cell.id];
+        }
+        return {
+            graph: this,
+            cell: cell,
+            title: getTitle(),
+            content: getContent(),
+            width: getSize()[0],
+            height: getSize()[1]
+        }
     }
     //拖拽图片转换成base64以xml形式插入contianer
     MyGraph.prototype.handleDrop = function(graph, file, x, y){
@@ -578,7 +761,6 @@
                 return new fNewConstr().execute(this.parent);
 
             }else{
-                console.log(new mxFastOrganicLayout(this))
                 new mxFastOrganicLayout(this).execute(this.parent); //默认自动优化布局
             }
         }finally{
@@ -637,9 +819,79 @@
              .simulate(document, '_blank');
     }
      MyGraph.prototype.myUtil = function(){
+        var _self = this;
         return {
+            //获取本地时间
             getLocalTime: function(){
                 return new Date(parseInt(new Date().getTime())).toLocaleString().replace(/:\d{1,2}$/,' ');
+            },
+            //GUID
+            getGuid: function(len, radix){
+                var chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'.split('');
+                var uuid = [], i;
+                radix = radix || chars.length;
+                if (len) {
+                  // Compact form
+                  for (i = 0; i < len; i++) uuid[i] = chars[0 | Math.random()*radix];
+                } else {
+                  // rfc4122, version 4 form
+                  var r;
+                  // rfc4122 requires these characters
+                  uuid[8] = uuid[13] = uuid[18] = uuid[23] = '-';
+                  uuid[14] = '4';
+                  // Fill in random data.  At i==19 set the high bits of clock sequence as
+                  // per rfc4122, sec. 4.1.5
+                  for (i = 0; i < 36; i++) {
+                    if (!uuid[i]) {
+                      r = 0 | Math.random()*16;
+                      uuid[i] = chars[(i == 19) ? (r & 0x3) | 0x8 : r];
+                    }
+                  }
+                }
+                return uuid.join('') + '-' + new Date().getTime();
+            },
+            //弹框
+            showModalWindow: function(options){
+                if(Object.prototype.toString.call(options) === "[object Undefined]" ||
+                   Object.prototype.toString.call(options) === "[object Null]"){
+                    return;
+                }
+                var background = document.createElement('div'),
+                    graph = options.graph,
+                    cell = options.cell,
+                    title = options.title,
+                    content = options.content,
+                    width = options.width,
+                    height = options.height;
+                background.style.position = 'fixed';
+                background.style.left = '0px';
+                background.style.top = '0px';
+                background.style.right = '0px';
+                background.style.bottom = '0px';
+                background.style.background = 'black';
+                mxUtils.setOpacity(background, 50);
+                document.body.appendChild(background);
+                if (mxClient.IS_IE)
+                {
+                    new mxDivResizer(background);
+                }
+                var x = Math.max(0, document.body.scrollWidth/2-width/2);
+                var y = Math.max(10, (document.body.scrollHeight ||
+                            document.documentElement.scrollHeight)/2-height*2/3);
+                var wnd = new mxWindow(title, content, x, y, width, height, false, true);
+                wnd.setClosable(true);
+                // Fades the background out after after the window has been closed
+                wnd.addListener(mxEvent.DESTROY, function(evt)
+                {
+                    graph.setEnabled(true);
+                    mxEffects.fadeOut(background, 50, true, 
+                        10, 30, true);
+                });
+                graph.setEnabled(false);
+                graph.tooltipHandler.hide();
+                wnd.setScrollable(true);
+                wnd.setVisible(true);
+                _self.modalWindowCallback && _self.modalWindowCallback(_self,wnd,cell);
             }
         }
      }
@@ -685,6 +937,8 @@
                 offsetTop = (containerHeight - 90)/2,
                 v1 = _self.insertVertex(_self.parent, 'begin', '开始', 20, offsetTop, 90, 90, 'style1;image;image=images/begin.png');
                 v2 = _self.insertVertex(_self.parent, 'time', _self.myUtil().getLocalTime(), 200, offsetTop, 90, 90, 'style1;image;image=images/time.png');
+                //定义唯一Id
+                v2.guid = v2.id + '-' + _self.myUtil().getGuid(8,16);
                 e1 = _self.insertEdge(_self.parent, null, '', v1, v2);
 
             var sideImgs = _self.cellImages;
@@ -695,11 +949,12 @@
                         var cell = new mxCell(sideImgs[i].alt || '', new mxGeometry(0, 0, 90, 90),'style1;perimeterSpacing=4;strokeWidth=4;labelBackgroundColor=white;fontStyle=1');
                         //赋予目标组标志位(自定义)
                         cell.cellType = sideImgs[i].dataset.flag;
+                        //定义唯一Id
+                        cell.guid = cell.cellType + '-' + _self.myUtil().getGuid(8,16);
                         cell.vertex = true;
                         graph.setCellStyles(mxConstants.STYLE_IMAGE, "image;image="+sideImgs[i].getAttribute('src'), [cell]); //单独设置cell的背景图
                         graph.getTooltipForCell(cell);
                         var cells = graph.importCells([cell], x, y, target);
-
                         if (cells != null && cells.length > 0)
                         {
                          graph.scrollCellToVisible(cells[0]);
@@ -779,7 +1034,27 @@
         var myGraph = new MyGraph({
             container: wrap,
             cellImages: cellImgs,
-            cellImgContianer: cellImgContianer
+            cellImgContianer: cellImgContianer,
+            modalWindowCallback: function(graph,win,cell){
+                var btn = document.querySelector('.cell-save-btn');
+                var parent = btn.parentNode;
+                btn.onclick = function(){
+                    //保存数据时，必须更新cell label值
+                    var value = parent.querySelector('#nodeName').value;
+                    graph.getModel().beginUpdate();
+                    try{
+                        cell.setValue(value);
+                        var edit = new mxCellAttributeChange(
+                               cell, 'value',
+                               value);
+                        graph.getModel().execute(edit);
+                    }
+                    finally{
+                        graph.getModel().endUpdate();
+                        win.destroy();
+                    }
+                }
+            }
         });
 
         //通过xml还原Graph
