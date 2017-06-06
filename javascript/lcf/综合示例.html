@@ -263,8 +263,8 @@
     }
     //初始化事件
     MyGraph.prototype.initEvent = function(){
-        var _self = this, flag = false;
-        //监听cell变化
+        var _self = this;
+        //监听cell变化,解决两个cell不能同时既当target，又当source的问题
         this.getModel().addListener(mxEvent.CHANGE, function(sender, event){
             _self.validateGraph();
             //识别source和target只能有一条线
@@ -272,11 +272,11 @@
             var childs = changes.filter(function(item){
                 return item.child;
             })
-            if(childs.length > 0){
+            if(childs.length > 0 && childs[0].parent){
                 // console.log(childs)
                 var child = childs[0].child;
                 var parent = childs[0].parent.children;
-                // console.log(parent);
+                // console.log(childs[0].parent);
                 var edges = parent.filter(function(item){
                     return item.edge;
                 })
@@ -285,41 +285,26 @@
                 if(_self.connectTarget && _self.connectSource){
                     for (var i = edges.length - 1; i >= 0; i--) {
                         if(edges[i].source.guid === _self.connectTarget.guid && edges[i].target.guid === _self.connectSource.guid){
-                            flag = true;
+                            _self.connectTarget = null;
+                            _self.connectSource = null;
+                            setTimeout(function(){ _self.removeSelectedCell(); }, 0);
                             break;
-                        }
-                    }
-                    if(flag){
-                        if(_self.undoManager.canUndo()){
-                            alert("不能这样连线");
-                            _self.undoManager.undo();
                         }
                     }
                 }
             }
-
         });
 
-        //连接时的监听？
+        //连接时的监听
         this.connectionHandler.addListener(mxEvent.CONNECT, function(sender, evt){
                 var edge = evt.getProperty('cell');
                 var source = _self.getModel().getTerminal(edge, true);
                 var target = _self.getModel().getTerminal(edge, false);
-                console.log(edge)
-                console.log(source)
-                console.log(target)
+                // console.log(edge)
+                // console.log(source)
+                // console.log(target)
                 _self.connectSource = source;
                 _self.connectTarget = target;
-                // _self.defineInvalidConnect(new mxMultiplicity(
-                // false, target.value, null, null, 0, 0, [source.value],
-                // '排重不能连接到目标组'));
-
-                // var style = _self.getCellStyle(edge);
-                // var sourcePortId = style[mxConstants.STYLE_SOURCE_PORT];
-                // var targetPortId = style[mxConstants.STYLE_TARGET_PORT];
-
-                // mxLog.show();
-                // mxLog.debug('connect', edge, source.id, target.id, sourcePortId, targetPortId);
         });
 
         //监听撤销和恢复操作
