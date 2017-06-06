@@ -400,11 +400,11 @@
              _self.setSelectionCells(cells);
             }
         });
-        //双击点击cell,弹出设置窗口
+        //改写dbclick函数，双击点击cell,弹出设置窗口
         this.dblClick = function(evt, cell){
             if (this.isEnabled() && !mxEvent.isConsumed(evt) && cell != null && this.isCellEditable(cell)){
                 if (this.model.isEdge(cell)){
-                    return;
+                    this.startEditingAtCell(cell, evt);
                 }
                 else{
                     this.myUtil().showModalWindow(this.getModalWindowConfig(cell));
